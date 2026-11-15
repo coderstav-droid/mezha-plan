@@ -1,0 +1,385 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Межа — разбор и план</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: одна колонка ~980px, разделы как листы полевого журнала; NDVI-шкала — единственный яркий элемент */
+:root{
+  --bg:#f5f7f2; --surface:#ffffff; --fg:#1d2419; --muted:#5d6858; --line:#dde3d6;
+  --accent:#2f6b2a; --accent-soft:#e3eedc; --warn:#9a5b06; --warn-soft:#fbefd9;
+  --bad:#a3332a; --bad-soft:#f8e3e0; --chip:#eef2ea;
+  --ndvi-0:#a3332a; --ndvi-1:#d98a2b; --ndvi-2:#e8d34a; --ndvi-3:#8cc152; --ndvi-4:#2f7d32;
+  --f-display:"Onest","Inter",system-ui,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121610; --surface:#1a2017; --fg:#e6ebe1; --muted:#a2ad9b; --line:#2c3528;
+  --accent:#8cc76f; --accent-soft:#223020; --warn:#e2a54a; --warn-soft:#2f2614;
+  --bad:#ec8a80; --bad-soft:#341c19; --chip:#222a1f; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#121610; --surface:#1a2017; --fg:#e6ebe1; --muted:#a2ad9b; --line:#2c3528;
+  --accent:#8cc76f; --accent-soft:#223020; --warn:#e2a54a; --warn-soft:#2f2614;
+  --bad:#ec8a80; --bad-soft:#341c19; --chip:#222a1f; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15.5px;line-height:1.6}
+.wrap{max-width:1000px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:17px;font-weight:600}
+p{margin:0;max-width:68ch}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section{display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lead{font-size:18px;color:var(--muted)}
+.ndvi{height:10px;border-radius:5px;background:linear-gradient(90deg,var(--ndvi-0),var(--ndvi-1),var(--ndvi-2),var(--ndvi-3),var(--ndvi-4));max-width:420px}
+.ndvi-scale{display:flex;justify-content:space-between;max-width:420px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.hero{display:flex;flex-direction:column;gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.fact{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.fact b{font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums}
+.fact span{font-size:13px;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--chip)}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.mvp{background:var(--accent-soft);color:var(--accent)}
+.v2{background:var(--warn-soft);color:var(--warn)}
+.v3{background:var(--chip);color:var(--muted)}
+.yes{color:var(--accent);font-weight:600}
+.no{color:var(--muted)}
+.plus{background:var(--accent-soft);border-color:transparent}
+.minus{background:var(--bad-soft);border-color:transparent}
+.plus h3{color:var(--accent)} .minus h3{color:var(--bad)}
+.quote{border-left:3px solid var(--line);padding:4px 0 4px 14px;color:var(--muted)}
+.quote small{display:block;font-family:var(--f-mono);font-size:11.5px;margin-top:4px}
+.note{font-size:13.5px;color:var(--muted)}
+/* телефоны */
+.phones{display:flex;gap:18px;overflow-x:auto;padding-bottom:6px}
+.phone{flex:0 0 220px;border:1px solid var(--line);border-radius:26px;background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+.phone .bar{font-family:var(--f-display);font-weight:700;font-size:14px;display:flex;justify-content:space-between}
+.field{height:110px;border-radius:12px;position:relative;overflow:hidden;background:
+ radial-gradient(circle at 30% 40%,var(--ndvi-4) 0 22%,transparent 40%),
+ radial-gradient(circle at 70% 65%,var(--ndvi-1) 0 12%,transparent 30%),
+ linear-gradient(135deg,var(--ndvi-3),var(--ndvi-2))}
+.field i{position:absolute;right:8px;bottom:8px;background:var(--surface);color:var(--fg);font-style:normal;font-family:var(--f-mono);font-size:11px;padding:2px 6px;border-radius:6px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--chip);border-radius:8px}
+.row b{font-variant-numeric:tabular-nums}
+.ok{color:var(--accent)} .stop{color:var(--bad)}
+.btn{background:var(--accent);color:var(--surface);text-align:center;border-radius:10px;padding:8px;font-weight:600}
+.cap{font-size:12px;color:var(--muted);text-align:center}
+.screens{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.screen{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.screen b{font-family:var(--f-display);font-weight:600}
+.screen span{font-size:13.5px;color:var(--muted)}
+.questions{counter-reset:q;display:flex;flex-direction:column;gap:10px;padding:0;margin:0;list-style:none}
+.questions li{counter-increment:q;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:14px 16px 14px 52px;position:relative}
+.questions li::before{content:counter(q);position:absolute;left:16px;top:13px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--surface);font-family:var(--f-mono);font-size:12px;display:grid;place-items:center}
+.src{font-size:13.5px;display:flex;flex-direction:column;gap:4px;padding-left:18px;margin:0}
+.src a{word-break:break-word}
+</style>
+</head><body>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Разбор приложения и план своего · 15 ноября 2026</div>
+  <h1>HectaScout: что это такое и каким сделать своё приложение</h1>
+  <p class="lead">HectaScout — сервис для агронома и фермера: карта полей, спутниковые снимки посевов (индекс NDVI), журнал полевых работ, учёт ядохимикатов и удобрений. Ниже — подробный разбор оригинала и план нашего приложения и сайта. Рабочее название — <b>«Межа»</b>, его можно поменять.</p>
+  <div class="ndvi" role="img" aria-label="Шкала NDVI от 0 до 1"></div>
+  <div class="ndvi-scale"><span>0 · голая земля</span><span>0,5</span><span>1 · густые посевы</span></div>
+  <p class="note">Это шкала NDVI — главный «прибор» таких приложений. Спутник снимает поле, и по цвету видно, где растения сильные, а где проблемы.</p>
+</header>
+
+<section>
+  <div class="eyebrow">Часть 1 · Оригинал</div>
+  <h2>Коротко об HectaScout</h2>
+  <div class="facts">
+    <div class="fact"><b>АО «ГектаСофт»</b><span>Разработчик, Москва, с 2021 г.</span></div>
+    <div class="fact"><b>iOS · Android · Веб</b><span>Ещё есть в AppGallery (Huawei)</span></div>
+    <div class="fact"><b>10 тыс.+</b><span>Скачиваний в Google Play</span></div>
+    <div class="fact"><b>4,7 / 5,0</b><span>Оценка: Google Play (69 оценок) / App Store (37)</span></div>
+    <div class="fact"><b>Бесплатно</b><span>Установка; цены за работу нигде не опубликованы</span></div>
+    <div class="fact"><b>Версия 15</b><span>Обновляется часто, последнее — октябрь</span></div>
+  </div>
+  <p><b>Для кого:</b> фермеры, руководители хозяйств, агрономы, агроконсультанты в России, Казахстане и Беларуси. Основной упор — на контроль сезона: что посеяли, что и когда внесли, как растёт.</p>
+</section>
+
+<section>
+  <h2>Что умеет — по экранам</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Мобильное приложение</h3>
+      <ul>
+        <li><b>Реестр полей</b> — список участков и залежей, границы, урожайность</li>
+        <li><b>Карта</b> — поля на карте со снимком NDVI</li>
+        <li><b>Посевы</b> — культура, фазы развития, показатели сева и уборки на одном экране</li>
+        <li><b>Дневник агронома</b> — работы: сев, осмотр, обработка ядохимикатами (СЗР), удобрения, уборка. Работает без интернета</li>
+        <li><b>Заметки</b> — точка на карте, фото, видео, файлы, группировка, без интернета</li>
+        <li><b>Агрохиманализ почвы</b> — расчёт доз удобрений</li>
+        <li><b>Погода по каждому полю</b>, сумма температур для фаз культур и вредителей</li>
+        <li><b>Справочник пестицидов и агрохимикатов</b> РФ, Казахстана, Беларуси: регламенты, классы опасности, аналоги, офлайн</li>
+        <li><b>Агроконсультации</b> — вопрос эксперту с фото</li>
+        <li><b>Профиль хозяйства</b> — сотрудники (добавили только в октябре)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Веб-кабинет (сайт)</h3>
+      <ul>
+        <li><b>Сводка хозяйства</b> — карта, дашборд, состояние посевов</li>
+        <li><b>Реестр полей</b> — загрузка контура по кадастровому номеру, импорт, объединение и деление участков</li>
+        <li><b>Мониторинг</b> — NDVI, контрастный NDVI, карта плодородия, график NDVI по датам</li>
+        <li><b>Севооборот</b> — история сезонов, план, советы по предшественникам</li>
+        <li><b>Технологические карты</b> — работы, сроки, ресурсы, плановые затраты</li>
+        <li><b>Полевые работы</b> — обходы, журнал операций</li>
+        <li><b>Склад</b> — акты применения, накладные, инвентаризация</li>
+        <li><b>ФГИС «Сатурн»</b> — отправка отчётов о применении пестицидов в госсистему (это обязательно для хозяйств)</li>
+        <li><b>Справочник</b> и <b>консультации</b>, как в приложении</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Как зарабатывает</h2>
+  <div class="card">
+    <p>На сайте только кнопка «Начать работу — бесплатно». Тарифов и цен нет ни на сайте, ни в магазинах приложений: встроенных покупок в App Store не указано. Скорее всего, платные функции для крупных хозяйств продают по договору через менеджера. Кроме того, компания делает заказную разработку — от 30 000 ₽ за человеко-день.</p>
+    <p class="note">Вывод: модель «бесплатно, потом договор». Для фермера это неудобно — непонятно, сколько будет стоить, пока не позвонишь.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Сильные и слабые стороны</h2>
+  <div class="grid2">
+    <div class="card plus">
+      <h3>Сильные</h3>
+      <ul>
+        <li>Связка с ФГИС «Сатурн» — у многих конкурентов её нет</li>
+        <li>Справочник ядохимикатов трёх стран с аналогами, работает без связи</li>
+        <li>Дневник и заметки работают в поле без интернета</li>
+        <li>Есть и телефон, и компьютер; контур поля по кадастровому номеру</li>
+        <li>Бесплатный старт, частые обновления, простой интерфейс</li>
+      </ul>
+    </div>
+    <div class="card minus">
+      <h3>Слабые</h3>
+      <ul>
+        <li>Нет открытых цен — непонятно, что платно</li>
+        <li>Мало пользователей и отзывов: 10 тыс. скачиваний, ~100 оценок</li>
+        <li>Жалобы на поиск по справочнику: не находит препараты, которые в базе есть</li>
+        <li>Только индекс NDVI; нет индексов влаги и азота (NDMI, NDRE), которые есть у конкурентов</li>
+        <li>Нет задач для сотрудников, распознавания болезней по фото, учёта техники, экономики поля (прибыль с гектара)</li>
+        <li>В Google Play указано, что данные не шифруются; приложение тяжёлое — 159 МБ, нет версии для iPad</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Пункты про «нет функции» — это то, чего мы не нашли в описаниях, на сайте и в списке изменений. Внутри платной версии что-то из этого может быть.</p>
+</section>
+
+<section>
+  <h2>Что пишут пользователи</h2>
+  <p>Отзывов мало, и почти все хвалят справочник. Подробных жалоб в открытом доступе нет — это тоже сигнал: приложением пользуются в основном как справочником.</p>
+  <div class="grid3">
+    <div class="quote">Проверил свои препараты — всё точно, понравились полные регламенты и подбор аналогов. Рекомендует.<small>Google Play, июнь 2022 · пересказ</small></div>
+    <div class="quote">Полезное приложение, но поиск надо чинить: не находит часть препаратов, например гербицид «Форвард», хотя он в базе есть.<small>Google Play, июнь 2024 · пересказ</small></div>
+    <div class="quote">Удобный дизайн, простой поиск и навигация.<small>Google Play, октябрь 2021 · пересказ</small></div>
+  </div>
+  <p class="note">В App Store три отзыва, все положительные: удобно, быстрый поиск, благодарности разработчикам.</p>
+</section>
+
+<section>
+  <h2>Конкуренты</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Сервис</th><th>Что умеет</th><th>Цена</th><th>Чем интересен нам</th></tr></thead>
+    <tbody>
+      <tr><td><b>OneSoil</b></td><td>Поля и NDVI со спутника, дополнительные индексы, погода, севооборот, карты внесения</td><td>Бесплатно + платный Pro</td><td>Самый удобный бесплатный мониторинг; планка по простоте</td></tr>
+      <tr><td><b>ExactFarming</b></td><td>Цифровая агрономия, рейтинг полей по NDVI, точки отбора проб почвы</td><td>Бесплатно + подписка</td><td>Подсказывает, где брать пробы почвы</td></tr>
+      <tr><td><b>EOS Crop Monitoring</b></td><td>Много индексов, погодные риски, задачи для команды, скаутинг</td><td>Подписка</td><td>Хорошо сделаны задачи для сотрудников</td></tr>
+      <tr><td><b>Cropwise Operations</b></td><td>Учёт работ, техника, мониторинг, прогноз урожая</td><td>По договору</td><td>Для крупных агрохолдингов</td></tr>
+      <tr><td><b>АгроСигнал</b></td><td>Онлайн-контроль работ по датчикам на технике, оповещения об отклонениях</td><td>По договору</td><td>Телематика техники</td></tr>
+      <tr><td><b>«История поля»</b> (Геомир)</td><td>Учёт полей, топлива и урожая, защита от краж</td><td>По договору</td><td>Учёт топлива и урожая</td></tr>
+      <tr><td><b>АгроМон</b></td><td>Спутниковый мониторинг, графики вегетации, сравнение снимков</td><td>По договору</td><td>Сравнение снимков за разные даты</td></tr>
+      <tr><td><b>Агробаза, Betaren</b></td><td>Справочники СЗР, распознавание сорняков и вредителей</td><td>Бесплатно</td><td>Распознавание по фото</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="eyebrow">Часть 2 · Наше приложение</div>
+  <h2>«Межа»: полевой журнал, который работает в поле</h2>
+  <p class="lead">Идея: всё, что есть у HectaScout, плюс то, чего фермеру не хватает — понятные цены, задачи для работников, распознавание болезней по фото, подсказка «можно ли сегодня опрыскивать» и подсчёт прибыли с каждого гектара.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Функция</th><th>HectaScout</th><th>«Межа»</th><th>Когда</th></tr></thead>
+    <tbody>
+      <tr><td>Хозяйство, поля на карте, контур по кадастровому номеру, импорт файлов KML/SHP</td><td class="yes">есть</td><td>то же + рисование пальцем по карте</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Спутниковые снимки NDVI, график по датам</td><td class="yes">есть</td><td>+ индексы влаги и азота, сравнение двух дат шторкой</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Дневник работ: сев, осмотр, СЗР, удобрения, уборка</td><td class="yes">есть</td><td>то же, быстрее: работа за 3 нажатия, шаблоны</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Заметки с фото и точкой на карте, без интернета</td><td class="yes">есть</td><td>+ голосовая заметка, которая сама превращается в текст</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Справочник пестицидов и агрохимикатов</td><td class="yes">есть</td><td>умный поиск: с опечатками, по действующему веществу, по вредителю</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Погода по полю</td><td class="yes">есть</td><td>+ «окна обработки»: можно ли сегодня опрыскивать (ветер, дождь, температура)</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Калькулятор баковой смеси и норм внесения</td><td class="no">не нашли</td><td>сколько препарата на поле и на бак</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Отчёты в PDF и Excel</td><td class="no">не нашли</td><td>журнал работ, отчёт по полю, по сезону</td><td><span class="pill mvp">Первая версия</span></td></tr>
+      <tr><td>Сотрудники и задачи (наряды): «объехать поле 12», отметка с фото</td><td>только сотрудники</td><td>задачи, статусы, напоминания</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>Распознавание болезней, вредителей, сорняков по фото</td><td class="no">нет</td><td>фото → что это → подходящие препараты из справочника</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>ФГИС «Сатурн», склад, накладные</td><td class="yes">есть</td><td>то же</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>Технологические карты, севооборот</td><td class="yes">есть</td><td>то же</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>Экономика поля: затраты, урожай, прибыль с гектара</td><td>только плановые затраты</td><td>факт против плана, себестоимость тонны</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>Оповещения: резко упал NDVI, заморозок, риск болезни</td><td class="no">не нашли</td><td>уведомление на телефон</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>Уведомление пчеловодов об обработке (по закону — заранее)</td><td class="no">нет</td><td>готовое объявление и рассылка</td><td><span class="pill v2">Второй этап</span></td></tr>
+      <tr><td>Техника с GPS-трекерами, карты для разбрасывателей, пробы почвы по точкам, связь с 1С</td><td class="no">нет</td><td>для крупных хозяйств</td><td><span class="pill v3">Потом</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Как будут выглядеть главные экраны</h2>
+  <div class="phones">
+    <div class="phone">
+      <div class="bar"><span>Поле 12 · 84 га</span><span>⋯</span></div>
+      <div class="field"><i>NDVI 0,62</i></div>
+      <div class="row"><span>Культура</span><b>Пшеница оз.</b></div>
+      <div class="row"><span>Фаза</span><b>Кущение</b></div>
+      <div class="row"><span>Последняя работа</span><b>12.10</b></div>
+      <div class="btn">+ Записать работу</div>
+      <div class="cap">Карточка поля</div>
+    </div>
+    <div class="phone">
+      <div class="bar"><span>Окна обработки</span><span>Пт</span></div>
+      <div class="row"><span>06:00–10:00</span><b class="ok">можно</b></div>
+      <div class="row"><span>10:00–16:00</span><b class="stop">ветер 7 м/с</b></div>
+      <div class="row"><span>16:00–20:00</span><b class="ok">можно</b></div>
+      <div class="row"><span>Сб</span><b class="stop">дождь 8 мм</b></div>
+      <div class="row"><span>Сумма температур</span><b>+1 352°</b></div>
+      <div class="cap">Можно ли опрыскивать</div>
+    </div>
+    <div class="phone">
+      <div class="bar"><span>Что это?</span><span>фото</span></div>
+      <div class="field" style="height:80px"><i>лист</i></div>
+      <div class="row"><span>Септориоз</span><b>87 %</b></div>
+      <div class="row"><span>Бурая ржавчина</span><b>9 %</b></div>
+      <div class="row"><span>Подходят</span><b>6 препаратов</b></div>
+      <div class="btn">Назначить обработку</div>
+      <div class="cap">Распознавание по фото (2 этап)</div>
+    </div>
+  </div>
+  <h3>Все экраны приложения</h3>
+  <div class="screens">
+    <div class="screen"><b>Вход и хозяйство</b><span>Телефон по СМС, название хозяйства, регион</span></div>
+    <div class="screen"><b>Карта полей</b><span>Все поля, раскраска по NDVI или культуре, поиск</span></div>
+    <div class="screen"><b>Карточка поля</b><span>Снимки, работы, заметки, погода, история</span></div>
+    <div class="screen"><b>Новая работа</b><span>Тип, дата, препарат, норма, кто делал</span></div>
+    <div class="screen"><b>Заметка / осмотр</b><span>Фото, голос, точка на карте</span></div>
+    <div class="screen"><b>Справочник и калькулятор</b><span>Поиск препарата, регламент, расчёт на бак</span></div>
+    <div class="screen"><b>Погода и окна обработки</b><span>По каждому полю на 7 дней</span></div>
+    <div class="screen"><b>Задачи</b><span>Мои задачи, назначенные, выполненные (2 этап)</span></div>
+    <div class="screen"><b>Профиль и офлайн</b><span>Сотрудники, загрузка карт для работы без связи, тариф</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Часть 3 · Сайт</div>
+  <h2>Сайт из двух частей</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Открытый сайт — приводит клиентов</h3>
+      <ul>
+        <li><b>Главная</b> — что умеет, живой пример поля, кнопка «Попробовать»</li>
+        <li><b>Тарифы</b> — цены открыто, калькулятор по гектарам</li>
+        <li><b>Открытый справочник препаратов</b> — каждая страница находится в Яндексе и Google по названию препарата. Это главный бесплатный источник посетителей</li>
+        <li><b>Статьи</b> — советы агроному по сезонам</li>
+        <li><b>Вход в кабинет</b></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Кабинет — работа за компьютером</h3>
+      <ul>
+        <li><b>Сводка</b> — карта хозяйства, что требует внимания сегодня</li>
+        <li><b>Поля</b> — таблица, импорт, кадастр</li>
+        <li><b>Мониторинг</b> — снимки, сравнение дат, графики</li>
+        <li><b>Журнал работ</b> — фильтры, выгрузка в Excel</li>
+        <li><b>Команда и задачи</b> (2 этап)</li>
+        <li><b>Севооборот, техкарты, экономика, склад, «Сатурн»</b> (2 этап)</li>
+        <li><b>Настройки и оплата</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Цены — предложение</h2>
+  <div class="grid3">
+    <div class="card"><h3>Бесплатно</h3><p>До 100 га, 1 человек. Поля, NDVI, дневник, справочник, погода.</p></div>
+    <div class="card"><h3>Фермер</h3><p>Оплата за гектар в сезон, цена на сайте. Без ограничений по полям, до 10 сотрудников, отчёты, окна обработки.</p></div>
+    <div class="card"><h3>Хозяйство</h3><p>Для больших площадей: задачи, «Сатурн», склад, экономика, связь с 1С. Цена от площади, тоже открыта.</p></div>
+  </div>
+  <p class="note">Конкретные суммы назначим позже, после проверки себестоимости снимков и серверов.</p>
+</section>
+
+<section>
+  <h2>Из чего строим</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Часть</th><th>Технология</th><th>Простыми словами</th></tr></thead>
+    <tbody>
+      <tr><td>Приложение</td><td>React Native (Expo)</td><td>Один код сразу для iPhone и Android</td></tr>
+      <tr><td>Работа без интернета</td><td>Локальная база SQLite + синхронизация</td><td>Всё пишется в телефон, отправляется при появлении связи</td></tr>
+      <tr><td>Карты</td><td>MapLibre, офлайн-карты</td><td>Бесплатные карты, скачиваются заранее</td></tr>
+      <tr><td>Сайт и кабинет</td><td>Next.js (TypeScript)</td><td>Общий код с приложением, быстро и хорошо находится поисковиками</td></tr>
+      <tr><td>Сервер и база</td><td>PostgreSQL + PostGIS</td><td>Надёжная база, которая умеет работать с контурами полей</td></tr>
+      <tr><td>Снимки полей</td><td>Sentinel-2 (Copernicus)</td><td>Бесплатные европейские спутники, снимок раз в ~5 дней</td></tr>
+      <tr><td>Погода</td><td>Open-Meteo</td><td>Бесплатный точный прогноз по координатам</td></tr>
+      <tr><td>Распознавание по фото</td><td>Нейросеть Claude (модель с компьютерным зрением)</td><td>Смотрит фото листа и называет болезнь</td></tr>
+      <tr><td>Хостинг</td><td>Сервер в России (Yandex Cloud или Selectel)</td><td>Так требует закон о персональных данных</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Порядок работы</h2>
+  <div class="grid3">
+    <div class="card"><h3>Шаг 1 · Прототип</h3><p>Кликабельные экраны приложения и кабинета, без настоящих данных. Посмотрите, поправим.</p></div>
+    <div class="card"><h3>Шаг 2 · Первая версия</h3><p>Всё из «первой версии» в таблице. Проверка на ваших полях или полях знакомого фермера.</p></div>
+    <div class="card"><h3>Шаг 3 · Второй этап</h3><p>Задачи, фото-распознавание, «Сатурн», экономика. Публикация в магазинах — только с вашего согласия.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Что нужно решить вместе</h2>
+  <ol class="questions">
+    <li><b>Название.</b> «Межа» подходит? Другие варианты: «Полевод», «Агроглаз», «Нивник».</li>
+    <li><b>Для кого в первую очередь:</b> небольшой фермер (до 2–3 тыс. га) или крупное хозяйство с агрономической службой? От этого зависит, что делать первым.</li>
+    <li><b>Зачем это вам:</b> продавать как сервис, пользоваться самим или показать заказчику? Если продавать — нужны тарифы и оплата сразу.</li>
+    <li><b>С чего начать:</b> с прототипа экранов (быстро посмотреть вживую) или сразу с рабочей первой версии?</li>
+    <li><b>Состав первой версии:</b> всё ли в списке нужно, чего не хватает?</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Источники</h2>
+  <ul class="src">
+    <li><a href="https://apps.apple.com/ru/app/hectascout-%D1%83%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D0%BF%D0%BE%D0%BB%D1%8F%D0%BC%D0%B8/id1597973846">HectaScout в App Store</a> — описание, история версий, отзывы</li>
+    <li><a href="https://play.google.com/store/apps/details?id=ru.hectasoft.scout&hl=ru">HectaScout в Google Play</a> — оценка 4,7, 10 тыс.+ скачиваний, отзывы, безопасность данных</li>
+    <li><a href="https://hectascout.ru">hectascout.ru</a> — сайт сервиса: функции веб-кабинета, «Сатурн»</li>
+    <li><a href="https://hectascout.ru/info.html">hectascout.ru/info.html</a> — сведения о компании, стек, стоимость заказной разработки</li>
+    <li><a href="https://sber.pro/publication/kakimi-mobilnymi-prilozheniiami-polzuiutsia-agronomy/">СберПро: какими приложениями пользуются агрономы</a></li>
+    <li><a href="https://apps.apple.com/ru/app/onesoil-%D0%BC%D0%BE%D0%BD%D0%B8%D1%82%D0%BE%D1%80%D0%B8%D0%BD%D0%B3-%D0%BF%D0%BE%D0%BB%D0%B5%D0%B9/id1458134040">OneSoil в App Store</a> и <a href="https://onesoil.ai/en/resources/onesoil-mob-app-is-moving-to-freemium">переход OneSoil на бесплатную модель с Pro</a></li>
+    <li><a href="https://agritechobservatory.review.fao.org/en/exactfarming">ExactFarming — обзор ФАО</a></li>
+    <li><a href="https://eos.com/products/crop-monitoring/key-functions/scouting-app/">EOS Crop Monitoring — скаутинг</a></li>
+    <li><a href="https://www.rustore.ru/catalog/app/com.agrosignal.mobile">АгроСигнал. Мобайл в RuStore</a></li>
+    <li><a href="https://files.agromon.ru/files/АгроМон_общая_презентация_2025.pdf">АгроМон — презентация 2025</a></li>
+    <li><a href="https://www.cleverence.ru/articles/biznes/-fgis-saturn-dlya-selhozproizvoditeley-kak-rabotat-v-programme-i-vesti-uchet-pestitsidov-i-agrohimikatov-v-2026-godu/">ФГИС «Сатурн» для сельхозпроизводителей, 2026</a></li>
+  </ul>
+</section>
+
+</div>
+</body></html>
